@@ -21,6 +21,10 @@ func (s *Server) Run() error {
 func NewServer() *Server {
 	s := &Server{}
 	s.r = gin.New()
+	//todo out cluster, get in/out config from yaml file
+	//* InOut->Out->Auth->Approve->No->Endpoint
+	//*      |                   |-> Yes -> Insert db
+	//*      |-> In -> cluster gateway -> Auth -> Approve
 	s.r.Use(midware.LoggerToFile(), midware.Auth(), gin.Recovery())
 	s.r.GET("/health", handler.Health)
 	s.r.Any("/:module/*endpoint", handler.Proxy)

@@ -76,17 +76,22 @@ func LoggerToFile() gin.HandlerFunc {
 	}
 }
 
-// Auth 
+// Auth
 func Auth() gin.HandlerFunc {
-	return  func(c *gin.Context) {
+	return func(c *gin.Context) {
 
 	}
 }
 
-
-// Approve 
+// Approve
 func Approve() gin.HandlerFunc {
-	return  func(c *gin.Context) {
-		
+	return func(c *gin.Context) {
+
+	}
+}
+
+func InOut() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
 	}
 }
