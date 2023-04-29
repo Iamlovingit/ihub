@@ -1,9 +1,9 @@
-FROM golang:1.18 AS build
+FROM golang:1.19 AS build
 WORKDIR /
-COPY hfproxy /project/hfproxy/
-RUN cd /project/hfproxy && go build -mod vender -o hfproxy -ldflags '-linkmode "external" -extldflags "-static"'
+COPY ihub /project/ihub/
+RUN cd /project/ihub && go build -mod vender -o ihub -ldflags '-linkmode "external" -extldflags "-static"'
 
 FROM scratch AS final
-COPY --from=build /project/hfproxy/hfproxy .
-COPY --from=build /project/hfproxy/hfproxy-config.yaml .
-CMD ["./hfproxy"]
+COPY --from=build /project/ihub/ihub .
+COPY --from=build /project/ihub/ihub-config.yaml .
+CMD ["./ihub"]

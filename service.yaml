@@ -1,7 +1,7 @@
 apiVersion: serving.knative.dev/v1
 kind: Service
 metadata:
-  name: hfproxy
+  name: ihub
   namespace: default
 spec:
 template:
@@ -11,7 +11,7 @@ template:
       autoscaling.knative.dev/minScale: "1"
   spec:
     containers:
-    - image: harbor-infp.com:14444/ais-system47/hfproxy:latest
+    - image: harbor-infp.com:14444/ais-system47/ihub:latest
       ports:
       - containerPort: 30555
       readinessProbe:
