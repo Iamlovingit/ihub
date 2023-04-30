@@ -21,5 +21,8 @@ func main() {
 
 	//init server
 	app := server.NewServer()
+	if app == nil {
+		panic("New Server failed.")
+	}
 	app.Run()
 }
