@@ -107,7 +107,9 @@ type DomainId struct {
 // GetDomainIdByClusterName .
 func GetDomainIdByClusterName(clusterName string) (string, int, error) {
 	var domainId []DomainId
-	err := DBInstance.Collection("cluster_manager").Find(db.Cond{"name": clusterName}).All(&domainId)
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"name": clusterName}).
+		All(&domainId)
 	if err != nil {
 		return "", 0, err
 	}
@@ -128,7 +130,9 @@ type ClusterStatus struct {
 // GetClusterStatus .
 func GetClusterStatus(clusterName string) (string, error) {
 	var clusterStatus ClusterStatus
-	err := DBInstance.Collection("cluster_manager").Find(db.Cond{"name": clusterName}).One(&clusterStatus)
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"name": clusterName}).
+		One(&clusterStatus)
 	if err != nil {
 		return "", err
 	}
