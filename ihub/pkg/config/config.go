@@ -36,12 +36,18 @@ type CacheConfig struct {
 	CachePath string `yaml:"cachePath"`
 }
 
+type MidwareConfig struct {
+	Midware string `yaml:"midware"`
+}
+
 // Configuration ...
 type Configuration struct {
-	DB     DBConfig     `yaml:"DB"`
-	LOG    LogConfig    `yaml:"log"`
-	SERVER ServerConfig `yaml:"server"`
-	CACHE  CacheConfig  `yaml:"cache"`
+	DB       DBConfig        `yaml:"DB"`
+	LOG      LogConfig       `yaml:"log"`
+	SERVER   ServerConfig    `yaml:"server"`
+	CACHE    CacheConfig     `yaml:"cache"`
+	Midwares []MidwareConfig `yaml:"midwares"`
+	Runmode  string          `yaml:"runmode"`
 }
 
 var gConfig Configuration
