@@ -2,12 +2,33 @@ package midware
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"time"
+
+	"ihub/pkg/config"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+func InitMidwares(r *gin.Engine) error {
+	midwareMap := map[string]gin.HandlerFunc{
+		"log":     LoggerToFile(),
+		"trace":   Trace(),
+		"inout":   InOut(),
+		"auth":    Auth(),
+		"approve": Approve(),
+	}
+	for _, mw := range config.GetConfig().Midwares {
+		if f, ok := midwareMap[mw.Midware]; ok {
+			r.Use(f)
+		} else {
+			return fmt.Errorf("midware %s is not exist.\n", mw.Midware)
+		}
+	}
+	return nil
+}
 
 type LogFormatter struct {
 	TimestampFormat string
@@ -91,6 +112,12 @@ func Approve() gin.HandlerFunc {
 }
 
 func InOut() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+	}
+}
+
+func Trace() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
 	}
