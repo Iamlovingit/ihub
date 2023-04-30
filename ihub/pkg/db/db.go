@@ -13,7 +13,7 @@ import (
 
 // ClusterManager .
 type ClusterManager struct {
-	ID             int            `db:"id"`
+	ID             int            `db:"id, omitempty"`
 	Name           string         `db:"name"`
 	Domain         string         `db:"domain"`
 	Type           string         `db:"type"`
@@ -29,7 +29,7 @@ type ClusterManager struct {
 
 // ApproveRole .
 type ApproveRole struct {
-	ID        int    `db:"id"`
+	ID        int    `db:"id, omitempty"`
 	UserID    int    `db:"user_id"`
 	MOduleID  int    `db:"module_id"`
 	Authority string `db:"authority"`
@@ -40,7 +40,7 @@ type ApproveRole struct {
 
 // ApproveModule .
 type ApproveModule struct {
-	ModuleID          int    `db:"module_id"`
+	ModuleID          int    `db:"module_id, omitempty"`
 	ModuleName        string `db:"module_name"`
 	ModuleClusterType string `db:"module_cluster_type"`
 	ModuleApprove     int    `db:"module_approve"`
@@ -54,6 +54,19 @@ type ApproveOperate struct {
 	OperateAuthority  int    `db:"operate_authority"`
 	ModuleID          int    `db:"module_id"`
 	ModuleClusterType string `db:"module_cluster_type"`
+}
+
+// ResetClusterTrace .
+type ResetClusterTrace struct {
+	ID          int       `db:"id, omitempty"`
+	ClusterName string    `db:"cluster_name"`
+	Status      string    `db:"status"`
+	StepNum     int       `db:"step_num"`
+	StepInfo    string    `db:"step_info"`
+	TotalStep   int       `db:"total_step"`
+	ErrorInfo   string    `db:"error_info"`
+	InfoInfo    string    `db:"info_info"`
+	ResetTime   time.Time `db:"reset_time"`
 }
 
 // DBInstance global DB instance.
@@ -85,55 +98,173 @@ func Init() error {
 	return nil
 }
 
-// GetDomainByClusterName .
-// 根据集群名称获取对应的域名
-func GetDomainByClusterName(cn string) (string, error) {
-	fmt.Printf("cn: %v\n", cn)
-	var cluster ClusterManager
-	// 获取集群管理表的句柄
-	c := DBInstance.Collection("cluster_manager")
-	// 根据集群名称查询集群信息
-	rec := c.Find(db.Cond{"name": cn})
-	// 获取第一条记录并写入cluster变量中
-	err := rec.One(&cluster)
-	// 如果出错，打印错误信息并返回错误
+// DomainId .
+type DomainId struct {
+	Domain string `db:"domain"`
+	ID     int    `db:"id"`
+}
+
+// GetDomainIdByClusterName .
+func GetDomainIdByClusterName(clusterName string) (string, int, error) {
+	var domainId []DomainId
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"name": clusterName}).
+		All(&domainId)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
+		return "", 0, err
+	}
+	// 根据返回item数量 判断是否存在且唯一
+	if len(domainId) == 0 {
+		return "", 0, fmt.Errorf("clusterName %s not found", clusterName)
+	} else if len(domainId) > 1 {
+		return "", 0, fmt.Errorf("clusterName %s not unique", clusterName)
+	}
+	return domainId[0].Domain, domainId[0].ID, nil
+}
+
+// ClusterStatus .
+type ClusterStatus struct {
+	Status string `db:"status"`
+}
+
+// GetClusterStatus .
+func GetClusterStatus(clusterName string) (string, error) {
+	var clusterStatus ClusterStatus
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"name": clusterName}).
+		One(&clusterStatus)
+	if err != nil {
 		return "", err
 	}
-	fmt.Printf("cluster: %v\n", cluster)
-	// 返回集群的域名
-	return cluster.Domain, nil
+	return clusterStatus.Status, nil
 }
 
-func GetAuthority() ([]byte, error) {
-	return []byte(""), nil
+// ModuleauthorityModuleid .
+type ModuleauthorityModuleid struct {
+	Authority string `db:"authority"`
+	ModuleId  int    `db:"module_id"`
 }
 
-func GetDefaultAuthority() ([]byte, error) {
-	//var auth = make(map[string]int)
-	var operator []ApproveOperate
-	// 获取 approve_operate 表的句柄
-	c := DBInstance.Collection("approve_operate")
-	rec := c.Find(db.Cond{"operate_name": "default"})
-	err := rec.All(operator)
-	// 如果出错，打印错误信息并返回错误
+// GetModuleauthorityModuleid .
+// 根据clusterId、module、role查询module_id
+func GetModuleauthorityModuleid(clusterId int, moduleName string, role string) (string, int, error) {
+	// 根据 module_id 连接 approve_rule、 approve_module 两张表查询
+	var moduleauthorityModuleid []ModuleauthorityModuleid
+	req := DBInstance.SQL().
+		Select("a.authority, a.module_id").
+		From("approve_role a").
+		Join("approve_module b").
+		On("a.module_id = b.module_id").
+		Where(db.Cond{"a.cluster_id": clusterId, "b.module_name": moduleName, "a.user_role": role})
+	err := req.All(&moduleauthorityModuleid)
 	if err != nil {
-		fmt.Printf("err: %v\n", err)
-		return []byte(""), err
+		return "", 0, err
 	}
-	return []byte(""), nil
+	// 根据返回item数量 判断是否存在且唯一
+	if len(moduleauthorityModuleid) == 0 {
+		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, role %s not found", clusterId, moduleName, role)
+	} else if len(moduleauthorityModuleid) > 1 {
+		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, role %s not unique", clusterId, moduleName, role)
+	}
+	return moduleauthorityModuleid[0].Authority, moduleauthorityModuleid[0].ModuleId, nil
 }
 
-func GetAuthorityByApproveRole(approveRole int, moduleName string, clusterID int, operateName string) (string, error) {
-	// 如果 clusterID 为 -1 ，则返回错误
+// GetModuleauthorityModuleidInGroup .
+// 根据clusterId、module、组ID查询module_id
+func GetModuleauthorityModuleidInGroup(clusterId int, moduleName string, groupId int) (string, int, error) {
+	// 根据 module_id 连接 approve_rule、 approve_module 两张表查询
+	var moduleauthorityModuleid []ModuleauthorityModuleid
+	req := DBInstance.SQL().
+		Select("a.authority, a.module_id").
+		From("approve_role a").
+		Join("approve_module b").
+		On("a.module_id = b.module_id").
+		Where(db.Cond{"a.cluster_id": clusterId, "b.module_name": moduleName, "a.group_id": groupId})
+	err := req.All(&moduleauthorityModuleid)
+	if err != nil {
+		return "", 0, err
+	}
+	// 根据返回item数量 判断是否存在且唯一
+	if len(moduleauthorityModuleid) == 0 {
+		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, group %d not found", clusterId, moduleName, groupId)
+	} else if len(moduleauthorityModuleid) > 1 {
+		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, group %d not unique", clusterId, moduleName, groupId)
+	}
+	return moduleauthorityModuleid[0].Authority, moduleauthorityModuleid[0].ModuleId, nil
+}
 
-	// 如果 approveRole 为 0 （集群管理员）
-	// 		如果 ApproveRole 查询到 1 条数据，则返回该数据的 authority 字段
-	// 		如果 ApproveRole 查询到 <1 条数据，则在 ApproveOperate 表中查询默认审批标志位
-	// 		如果 ApproveOperate 查询到 >1 条数据，则返回错误
+// Defaultauthority .
+type Defaultauthority struct {
+	Authority string `db:"authority"`
+}
 
-	// 如果 approveRole 为 1 （组管理员）
+// GetDefaultauthority .
+// 根据clusterId、module、operate_name查询默认权限
+func GetDefaultauthority(clusterId int, moduleName string, operateName string) (string, error) {
+	// 根据c.source_division b.module_cluster_type 连接 cluster_manager 和 approve_module 两张表查询
+	// 根据 module_id 连接 approve_operate、 approve_module 两张表查询
+	var defaultauthority []string
+	req := DBInstance.SQL().
+		Select("a.authority").
+		From("approve_operate a").
+		Join("approve_module b").
+		On("a.module_id = b.module_id").
+		Join("cluster_manager c").
+		On("b.module_cluster_type = c.source_division OR b.module_cluster_type = 'All'").
+		Where(db.Cond{"c.id": clusterId, "b.module_name": moduleName, "a.operate_name": operateName})
+	err := req.All(&defaultauthority)
+	if err != nil {
+		return "", err
+	}
+	// 根据返回item数量 判断是否存在且唯一
+	if len(defaultauthority) == 0 {
+		return "", fmt.Errorf("clusterId %d, moduleName %s, operateName %s not found", clusterId, moduleName, operateName)
+	} else if len(defaultauthority) > 1 {
+		return "", fmt.Errorf("clusterId %d, moduleName %s, operateName %s not unique", clusterId, moduleName, operateName)
+	}
+	return defaultauthority[0], nil
+}
 
-	return "", nil
+// Operatorid .
+type Operatorid struct {
+	OperatorId int `db:"operator_id"`
+}
+
+// GetOperatorid .
+// 根据module_id、operate_name查询操操作id
+func GetOperatorid(moduleId int, operateName string) (int, error) {
+	// 根据 approve_operate 表查询
+	var operatorid []Operatorid
+	req := DBInstance.SQL().
+		Select("operator_id").
+		From("approve_operate").
+		Where(db.Cond{"module_id": moduleId, "operate_name": operateName})
+	err := req.All(&operatorid)
+	if err != nil {
+		return 0, err
+	}
+	// 根据返回item数量 判断是否存在且唯一
+	if len(operatorid) == 0 {
+		return 0, fmt.Errorf("moduleId %d, operateName %s not found", moduleId, operateName)
+	} else if len(operatorid) > 1 {
+		return 0, fmt.Errorf("moduleId %d, operateName %s not unique", moduleId, operateName)
+	}
+	return operatorid[0].OperatorId, nil
+}
+
+// 向 approve_inf 插入一条记录
+// resource_info resource_detail headers createtime userid module_name operate_name status clusterid
+// user_role url method approve_role group_id type
+// 其中 createtime 为当前时间， 使用SQL函数NOW()获取
+func InsertApproveInf(resourceInfo string, resourceDetail string, headers string, userId int, moduleName string, operateName string, status string, clusterId int, userRole string, url string, method string, approveRole string, groupId int, approveType string) error {
+	// 根据 approve_inf 表查询
+	req := DBInstance.SQL().
+		InsertInto("approve_inf").
+		Columns("resource_info", "resource_detail", "headers", "createtime", "userid", "module_name", "operate_name", "status", "clusterid", "user_role", "url", "method", "approve_role", "groupid", "type").
+		Values(resourceInfo, resourceDetail, headers, db.Raw("NOW()"), userId, moduleName, operateName, status, clusterId, userRole, url, method, approveRole, groupId, approveType)
+	_, err := req.Exec()
+	if err != nil {
+		return err
+	}
+	return nil
 }
