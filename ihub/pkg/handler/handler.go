@@ -36,7 +36,8 @@ func Proxy(c *gin.Context) {
 	}
 
 	// 根据集群名称获取对应的域名
-	domain, err := mydb.GetDomainByClusterName(v[0])
+	// domain, err := mydb.GetDomainByClusterName(v[0])
+	domain, _, err := mydb.GetDomainIdByClusterName(v[0])
 	if err != nil {
 		rp := api.Reply{
 			Code:    1,
