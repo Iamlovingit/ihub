@@ -16,10 +16,11 @@ func parseModulenameClusterid(module string, endpoint string, clusterName string
 	// 根据config将module映射为中英文字符串
 	moduleName := config.GetConfig().Modules[module]
 	// 获取集群域名和集群ID
-	_, clusterID, err := db.GetDomainIdByClusterName(clusterName)
+	nameDomainIdList, err := db.GetDomainIdByClusterName(clusterName)
 	if err != nil {
 		return "", 0, err
 	}
+	clusterID := nameDomainIdList[0].ID
 	// 如果集群ID为-1(默认集群)则返回错误
 	if clusterID == -1 {
 		return "", 0, fmt.Errorf("默认集群不需要审批")

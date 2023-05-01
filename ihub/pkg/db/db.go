@@ -99,44 +99,51 @@ func Init() error {
 }
 
 // DomainId .
-type DomainId struct {
+type NameDomainId struct {
+	Name   string `db:"name"`
 	Domain string `db:"domain"`
 	ID     int    `db:"id"`
 }
 
 // GetDomainIdByClusterName .
-func GetDomainIdByClusterName(clusterName string) (string, int, error) {
-	var domainId []DomainId
+func GetDomainIdByClusterName(clusterName string) ([]NameDomainId, error) {
+	var domainId []NameDomainId
 	err := DBInstance.Collection("cluster_manager").
 		Find(db.Cond{"name": clusterName}).
 		All(&domainId)
 	if err != nil {
-		return "", 0, err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(domainId) == 0 {
-		return "", 0, fmt.Errorf("clusterName %s not found", clusterName)
-	} else if len(domainId) > 1 {
-		return "", 0, fmt.Errorf("clusterName %s not unique", clusterName)
+	return domainId, nil
+}
+
+// GetDomainByClusterId .
+func GetNameDomainByClusterId(clusterId int) ([]NameDomainId, error) {
+	var nameDomain []NameDomainId
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"id": clusterId}).
+		All(&nameDomain)
+	if err != nil {
+		return nil, err
 	}
-	return domainId[0].Domain, domainId[0].ID, nil
+	return nameDomain, nil
 }
 
 // ClusterStatus .
 type ClusterStatus struct {
-	Status string `db:"status"`
+	Status byte `db:"status"`
 }
 
 // GetClusterStatus .
-func GetClusterStatus(clusterName string) (string, error) {
+func GetClusterStatus(clusterName string) (int, error) {
 	var clusterStatus ClusterStatus
-	err := DBInstance.Collection("cluster_manager").
-		Find(db.Cond{"name": clusterName}).
+	err := DBInstance.Collection("reset_cluster_tracce").
+		Find(db.Cond{"cluster_name": clusterName}).
 		One(&clusterStatus)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	return clusterStatus.Status, nil
+	return int(clusterStatus.Status), nil
 }
 
 // ModuleauthorityModuleid .

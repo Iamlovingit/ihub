@@ -12,3 +12,8 @@ const RoleUser = 2
 // Runmode
 const RunmodeOut = "out"
 const RunmodeIn = "in"
+
+// ClusterStatus
+const ClusterStatusReseting = 2
+const ClusterStatusResetSucceed = 1
+const ClusterStatusResetFailed = 0

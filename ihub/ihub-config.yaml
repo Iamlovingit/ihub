@@ -62,3 +62,11 @@ appstoreMap:
   v1/token/create: 'api_create'
   v1/token/update: 'api_update'
   v1/token/delete: 'api_delete'
+outerService:
+  cluster-manager: 30418
+  node-manager: 30419
+  log-manager: 30420
+  mail: 30421
+  approve-outer: 30422
+  account-server-outer: 33333
+  authentication-manager: 33334

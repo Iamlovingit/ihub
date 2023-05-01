@@ -2,14 +2,17 @@ package midware
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"ihub/pkg/api"
 	"ihub/pkg/config"
 	"ihub/pkg/constants"
+	"ihub/pkg/db"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -160,109 +163,227 @@ func Approve() gin.HandlerFunc {
 		// 将除了第一个元素以外的元素拼接起来
 		endpoint := strings.Join(pathSlice[1:], "/")
 
-		// 如果以下两种字符串不为空，则说明是集群内流量
-		// 从header 的 X-Cluster-Name 中获集群名称，或从args 的 clustername 中获取集群名称
-		var clusterName string
-		if c.Request.Header.Get("X-Cluster-Name") != "" ||
-			c.Request.URL.Query().Get("clustername") != "" {
-			// 获取集群名称
-			if c.Request.Header.Get("X-Cluster-Name") != "" {
-				clusterName = c.Request.Header.Get("X-Cluster-Name")
-			} else {
-				clusterName = c.Request.URL.Query().Get("clustername")
+		// 获取集群名、集群域名
+		clusterName, exists := c.Get("ClusterName")
+		if !exists {
+			rp := api.Reply{
+				Code:    0,
+				Message: "集群名获取失败",
+				Data:    "",
 			}
-
-			// 集群内流量到达集群外网关(Next交给Proxy处理)
-			// 集群内流量到达集群内网关(需要审批?Insert:Next)
-			// 集群外流量到达集群外网关(需要审批?Insert:Next)
-			if destination == constants.DestinationIn &&
-				runmode == constants.RunmodeOut { // 集群内流量到达集群外网关(Next交给Proxy处理)
+			c.AbortWithStatusJSON(http.StatusOK, rp)
+		}
+		// 集群内流量到达集群外网关(Next交给Proxy处理)
+		// 集群内流量到达集群内网关(需要审批?Insert:Next)
+		// 集群外流量到达集群外网关(需要审批?Insert:Next)
+		if destination == constants.DestinationIn &&
+			runmode == constants.RunmodeOut { // 集群内流量到达集群外网关(Next交给Proxy处理)
+			c.Next()
+		} else if destination == constants.DestinationIn &&
+			runmode == constants.RunmodeIn { // 集群内流量到达集群内网关(需要审批?Insert:Next)
+			// 从Headers中获取信息
+			// 获取用户ID
+			//c.Request.Header.Get("X-User-Id")
+			if role == constants.RoleClusterAdmin { // 如果为管理员
+				needApprove, err := ClusterAdminNeedApprove(c.Request.Header, module, endpoint, clusterName.(string))
+				if err != nil {
+					rp := api.Reply{
+						Code:    0,
+						Message: err.Error(),
+						Data:    "",
+					}
+					c.AbortWithStatusJSON(http.StatusOK, rp)
+				}
+				c.Set("NeedApprove", needApprove)
 				c.Next()
-			} else if destination == constants.DestinationIn &&
-				runmode == constants.RunmodeIn { // 集群内流量到达集群内网关(需要审批?Insert:Next)
-				// 从Headers中获取信息
-				// 获取用户ID
-				//c.Request.Header.Get("X-User-Id")
-				if role == constants.RoleClusterAdmin { // 如果为管理员
-					needApprove, err := ClusterAdminNeedApprove(c.Request.Header, module, endpoint, clusterName)
-					if err != nil {
-						rp := api.Reply{
-							Code:    0,
-							Message: err.Error(),
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
+			} else if role == constants.RoleGroupAdmin { // 如果为组管理员
+				// 获取组Id
+				groupId, exists := c.Get("GroupId")
+				if !exists {
+					rp := api.Reply{
+						Code:    0,
+						Message: "组Id获取失败",
+						Data:    "",
 					}
-					c.Set("NeedApprove", needApprove)
-					c.Next()
-				} else if role == constants.RoleGroupAdmin { // 如果为组管理员
-					// 获取组Id
-					groupId, exists := c.Get("GroupId")
-					if !exists {
-						rp := api.Reply{
-							Code:    0,
-							Message: "组Id获取失败",
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
-					}
-					needApprove, err := GroupAdminNeedApprove(c.Request.Header, module, endpoint, clusterName, groupId.(int))
-					if err != nil {
-						rp := api.Reply{
-							Code:    0,
-							Message: err.Error(),
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
-					}
-					c.Set("NeedApprove", needApprove)
-					c.Next()
+					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
-			} else if destination == constants.DestinationOut &&
-				runmode == constants.RunmodeOut { // 集群外流量到达集群外网关(需要审批?Insert:Next)
-				if role == constants.RoleClusterAdmin { // 如果为管理员
-					needApprove, err := ClusterAdminNeedApprove(c.Request.Header, module, endpoint, clusterName)
-					if err != nil {
-						rp := api.Reply{
-							Code:    0,
-							Message: err.Error(),
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
+				needApprove, err := GroupAdminNeedApprove(c.Request.Header, module, endpoint, clusterName.(string), groupId.(int))
+				if err != nil {
+					rp := api.Reply{
+						Code:    0,
+						Message: err.Error(),
+						Data:    "",
 					}
-					c.Set("NeedApprove", needApprove)
-					c.Next()
-				} else if role == constants.RoleGroupAdmin { // 如果为组管理员
-					// 获取组Id
-					groupId, exists := c.Get("GroupId")
-					if !exists {
-						rp := api.Reply{
-							Code:    0,
-							Message: "组Id获取失败",
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
-					}
-					needApprove, err := GroupAdminNeedApprove(c.Request.Header, module, endpoint, clusterName, groupId.(int))
-					if err != nil {
-						rp := api.Reply{
-							Code:    0,
-							Message: err.Error(),
-							Data:    "",
-						}
-						c.AbortWithStatusJSON(http.StatusOK, rp)
-					}
-					c.Set("NeedApprove", needApprove)
-					c.Next()
+					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
+				c.Set("NeedApprove", needApprove)
+				c.Next()
+			}
+		} else if destination == constants.DestinationOut &&
+			runmode == constants.RunmodeOut { // 集群外流量到达集群外网关(需要审批?Insert:Next)
+			if role == constants.RoleClusterAdmin { // 如果为管理员
+				needApprove, err := ClusterAdminNeedApprove(c.Request.Header, module, endpoint, clusterName.(string))
+				if err != nil {
+					rp := api.Reply{
+						Code:    0,
+						Message: err.Error(),
+						Data:    "",
+					}
+					c.AbortWithStatusJSON(http.StatusOK, rp)
+				}
+				c.Set("NeedApprove", needApprove)
+				c.Next()
+			} else if role == constants.RoleGroupAdmin { // 如果为组管理员
+				// 获取组Id
+				groupId, exists := c.Get("GroupId")
+				if !exists {
+					rp := api.Reply{
+						Code:    0,
+						Message: "组Id获取失败",
+						Data:    "",
+					}
+					c.AbortWithStatusJSON(http.StatusOK, rp)
+				}
+				needApprove, err := GroupAdminNeedApprove(c.Request.Header, module, endpoint, clusterName.(string), groupId.(int))
+				if err != nil {
+					rp := api.Reply{
+						Code:    0,
+						Message: err.Error(),
+						Data:    "",
+					}
+					c.AbortWithStatusJSON(http.StatusOK, rp)
+				}
+				c.Set("NeedApprove", needApprove)
+				c.Next()
 			}
 		}
 	}
 }
 
+// 当域名数量为1时，判断集群异常状态
+func checkClusterStatus(clusterName string) error {
+	clusterStatus, err := db.GetClusterStatus(clusterName)
+	if err != nil {
+		return err
+	}
+	if clusterStatus == constants.ClusterStatusReseting || clusterStatus == constants.ClusterStatusResetSucceed {
+		return errors.New("集群正在重置中")
+	} else if clusterStatus == constants.ClusterStatusResetFailed {
+		return errors.New("集群重置失败")
+	} else {
+		return nil
+	}
+}
+
+// 检测域名合法性
+func checkDomain(nameDomainId []db.NameDomainId) (api.Reply, error) {
+
+	if len(nameDomainId) < 1 {
+		rp := api.Reply{
+			Code:    0,
+			Message: "集群不存在",
+			Data:    "",
+		}
+		return rp, errors.New("集群不存在")
+	} else if len(nameDomainId) == 1 {
+		// check
+		clusterName := nameDomainId[0].Name
+		err := checkClusterStatus(clusterName)
+		if err != nil {
+			rp := api.Reply{
+				Code:    0,
+				Message: err.Error(),
+				Data:    "",
+			}
+			return rp, err
+		}
+		return api.Reply{}, nil
+	} else {
+		rp := api.Reply{
+			Code:    0,
+			Message: "集群Id获取失败",
+			Data:    "",
+		}
+		return rp, errors.New("集群Id获取失败")
+	}
+}
+
 func InOut() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// [scheme:][//[userinfo@]host][/]path[?query][#fragment]
+		// 解析URL，获取module和endpoint path = module/endpoint
+		path := c.Request.URL.Path
+		// 用 / 分割path
+		pathSlice := strings.Split(path, "/")
+		module := pathSlice[0]
+		// 将除了第一个元素以外的元素拼接起来
+		//endpoint := strings.Join(pathSlice[1:], "/")
 
+		outerServiceMap := config.GetConfig().OuterService
+		if _, ok := outerServiceMap[module]; ok { // 如果在集群外模块列表中
+			c.Set("Destination", constants.DestinationOut)
+			c.Next()
+		} else if c.Request.Header.Get("X-Cluster-Name") != "" ||
+			c.Request.URL.Query().Get("clustername") != "" { // 如果参数中有集群名称
+			// 获取集群名称
+			var clusterName string
+			if c.Request.Header.Get("X-Cluster-Name") != "" {
+				clusterName = c.Request.Header.Get("X-Cluster-Name")
+			} else {
+				clusterName = c.Request.URL.Query().Get("clustername")
+			}
+			// 根据集群名获取集群域名
+			nameDomainIdList, err := db.GetDomainIdByClusterName(clusterName)
+			if err != nil {
+				rp := api.Reply{
+					Code:    0,
+					Message: "集群不存在",
+					Data:    "",
+				}
+				c.AbortWithStatusJSON(http.StatusOK, rp)
+			}
+			// 检测域名合法性
+			rp, err := checkDomain(nameDomainIdList)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusOK, rp)
+			}
+			// 设置集群名称、域名、目的地
+			c.Set("ClusterName", clusterName)
+			c.Set("ClusterDomain", nameDomainIdList[0].Domain)
+			c.Set("Destination", constants.DestinationIn)
+			c.Next()
+		} else if c.Request.Header.Get("X-Cluster-ID") != "" { // 如果Header中有集群Id
+			// 获取集群Id
+			clusterId, err := strconv.Atoi(c.Request.Header.Get("X-Cluster-ID"))
+			if err != nil {
+				rp := api.Reply{
+					Code:    0,
+					Message: "集群Id获取失败",
+					Data:    "",
+				}
+				c.AbortWithStatusJSON(http.StatusOK, rp)
+			}
+			// 根据集群Id获取集群域名
+			nameDomainList, err := db.GetNameDomainByClusterId(clusterId)
+			if err != nil {
+				rp := api.Reply{
+					Code:    0,
+					Message: err.Error(),
+					Data:    "",
+				}
+				c.AbortWithStatusJSON(http.StatusOK, rp)
+			}
+			//checkDomain
+			rp, err := checkDomain(nameDomainList)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusOK, rp)
+			}
+			// 设置集群名称、域名、目的地
+			c.Set("ClusterName", nameDomainList[0].Name)
+			c.Set("ClusterDomain", nameDomainList[0].Domain)
+			c.Set("Destination", constants.DestinationIn)
+			c.Next()
+		}
 	}
 }
 

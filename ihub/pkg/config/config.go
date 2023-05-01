@@ -88,6 +88,7 @@ type Configuration struct {
 	Operators     map[string]string   `yaml:"operators"`
 	ModuleOperate map[string][]string `yaml:"module_operate"`
 	AppstoreMap   map[string]string   `yaml:"appstore_map"`
+	OuterService  map[string]string   `yaml:"outerService"`
 }
 
 var gConfig Configuration
