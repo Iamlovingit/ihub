@@ -26,6 +26,9 @@ func NewServer() *Server {
 	//*      |                   |-> Yes -> Insert db
 	//*      |-> In -> cluster gateway -> Auth -> Approve
 
+	if err := midware.InitMidwares(s.r); err != nil {
+		return nil
+	}
 	s.r.Use(midware.LoggerToFile(), midware.Auth(), gin.Recovery())
 	s.r.GET("/health", handler.Health)
 	s.r.Any("/:module/*endpoint", handler.Proxy)
