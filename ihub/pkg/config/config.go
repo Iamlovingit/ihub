@@ -40,14 +40,54 @@ type MidwareConfig struct {
 	Midware string `yaml:"midware"`
 }
 
+// type ModulesConfig struct {
+// 	AccountServer string   `yaml:"account-server"`
+// 	ModelDeploy   string   `yaml:"model-deploy"`
+// 	Appstore      string   `yaml:"appstore"`
+// 	ApiSecurity   string   `yaml:"api-security"`
+// 	Tags          []string `yaml:"tags"`
+// }
+//
+// type OperatorsConfig struct {
+// 	ModifyGroupOwner     string   `yaml:"modify_group_owner"`
+// 	Update               string   `yaml:"update"`
+// 	Delete               string   `yaml:"delete"`
+// 	CreateNodeDeploy     string   `yaml:"create-node-deploy"`
+// 	DeleteNodeDeploy     string   `yaml:"delete-node-deploy"`
+// 	CreateNativeResource string   `yaml:"createNativeResource"`
+// 	DeleteNativeResource string   `yaml:"deleteNativeResource"`
+// 	CreateGraph          string   `yaml:"create-graph"`
+// 	DeleteGraph          string   `yaml:"delete-graph"`
+// 	CreateShareService   string   `yaml:"create-share-service"`
+// 	DeleteShareService   string   `yaml:"delete-share-service"`
+// 	Traffic              string   `yaml:"traffic"`
+// 	TrafficRollback      string   `yaml:"traffic-rollback"`
+// 	Promote              string   `yaml:"promote"`
+// 	SetModelShared       string   `yaml:"set_model_shared"`
+// 	DeleteModel          string   `yaml:"delete_model"`
+// 	TransferModel        string   `yaml:"transfer_model"`
+// 	AppTransfer          string   `yaml:"app_transfer"`
+// 	HelmDeploy           string   `yaml:"helm_deploy"`
+// 	AppAuth              string   `yaml:"app_auth"`
+// 	AppDelete            string   `yaml:"app_delete"`
+// 	ApiDelete            string   `yaml:"api_delete"`
+// 	ApiCreate            string   `yaml:"api_create"`
+// 	ApiUpdate            string   `yaml:"api_update"`
+// 	Tags                 []string `yaml:"tags"`
+// }
+
 // Configuration ...
 type Configuration struct {
-	DB       DBConfig        `yaml:"DB"`
-	LOG      LogConfig       `yaml:"log"`
-	SERVER   ServerConfig    `yaml:"server"`
-	CACHE    CacheConfig     `yaml:"cache"`
-	Midwares []MidwareConfig `yaml:"midwares"`
-	Runmode  string          `yaml:"runmode"`
+	DB            DBConfig            `yaml:"DB"`
+	LOG           LogConfig           `yaml:"log"`
+	SERVER        ServerConfig        `yaml:"server"`
+	CACHE         CacheConfig         `yaml:"cache"`
+	Midwares      []MidwareConfig     `yaml:"midwares"`
+	Runmode       string              `yaml:"runmode"`
+	Modules       map[string]string   `yaml:"modules"`
+	Operators     map[string]string   `yaml:"operators"`
+	ModuleOperate map[string][]string `yaml:"module_operate"`
+	AppstoreMap   map[string]string   `yaml:"appstore_map"`
 }
 
 var gConfig Configuration
