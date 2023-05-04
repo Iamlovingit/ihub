@@ -8,13 +8,9 @@ import (
 	"net/http"
 )
 
-func parseModulenameClusterid(module string, endpoint string, clusterName string) (string, int, error) {
-	// 如果是应用商店接口，需要进行接口转换，如去掉v1/helm、v1/store等
-	if _, ok := config.GetConfig().AppstoreMap[endpoint]; ok {
-		endpoint = config.GetConfig().AppstoreMap[endpoint]
-	}
+func parseModulenameClusterid(module string, clusterName string) (string, int, error) {
 	// 根据config将module映射为中英文字符串
-	moduleName := config.GetConfig().Modules[module]
+	moduleName := config.GetConfig().ApproveMap.OperatorTransMap[module]
 	// 获取集群域名和集群ID
 	nameDomainIdList, err := db.GetDomainIdByClusterName(clusterName)
 	if err != nil {
@@ -31,7 +27,7 @@ func parseModulenameClusterid(module string, endpoint string, clusterName string
 // 查询默认审批权限
 func defaultAuth(endpoint string, moduleName string, clusterID int) (bool, error) {
 	// 根据配置文件及endpoint查询operatename
-	operateName := config.GetConfig().Operators[endpoint]
+	operateName := config.GetConfig().ApproveMap.OperatorTransMap[endpoint]
 	// 根据clusterId、Module、operateName查询默认审批权限
 	DefaultauthorityList, err := db.GetDefaultauthority(clusterID, moduleName, operateName)
 	if err != nil {
@@ -49,8 +45,8 @@ func defaultAuth(endpoint string, moduleName string, clusterID int) (bool, error
 
 func ClusterAdminNeedApprove(header http.Header, module string, endpoint string, clusterName string) (bool, error) {
 
-	// 拆分信息
-	moduleName, clusterID, err := parseModulenameClusterid(module, endpoint, clusterName)
+	// 解析信息
+	moduleName, clusterID, err := parseModulenameClusterid(module, clusterName)
 	if err != nil {
 		return false, err
 	}
@@ -91,8 +87,8 @@ func ClusterAdminNeedApprove(header http.Header, module string, endpoint string,
 
 // 组管理员操作 判断是否需要审批
 func GroupAdminNeedApprove(header http.Header, module string, endpoint string, clusterName string, groupId int) (bool, error) {
-	// 拆分信息
-	moduleName, clusterID, err := parseModulenameClusterid(module, endpoint, clusterName)
+	// 解析信息
+	moduleName, clusterID, err := parseModulenameClusterid(module, clusterName)
 	if err != nil {
 		return false, err
 	}

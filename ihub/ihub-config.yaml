@@ -22,51 +22,73 @@ midwares:
 - midware: "trace"
 - midware: "inout"
 - midware: "auth"
-modules:
-  account-server: '{"zh-CN": "用户管理","en-US": "account-server"}'
-  model-deploy: '{"zh-CN": "模型服务","en-US": "model-deploy"}'
-  appstore: '{"zh-CN": "应用商店管理","en-US": "appstore"}'
-  api-security: '{"zh-CN": "API授权","en-US": "api-security"}'
-operators:
-  modify_group_owner: '{"zh-CN": "资源修改","en-US": "modify_group_owner"}'
-  update: '{"zh-CN": "应用部署","en-US": "update"}'
-  delete: '{"zh-CN": "应用删除","en-US": "delete"}'
-  create-node-deploy: '{"zh-CN": "节点部署","en-US": "create-node-deploy"}'
-  delete-node-deploy: '{"zh-CN": "节点部署删除","en-US": "delete-node-deploy"}'
-  createNativeResource: '{"zh-CN": "原生部署","en-US": "createNativeResource"}'
-  deleteNativeResource: '{"zh-CN": "原生部署删除","en-US": "deleteNativeResource"}'
-  create-graph: '{"zh-CN": "服务编排创建","en-US": "create-graph"}'
-  delete-graph: '{"zh-CN": "服务编排删除","en-US": "delete-graph"}'
-  create-share-service: '{"zh-CN": "细粒度服务创建","en-US": "create-share-service"}'
-  delete-share-service: '{"zh-CN": "细粒度服务删除","en-US": "delete-share-service"}'
-  traffic: '{"zh-CN": "创建/修改流量调控","en-US": "traffic"}'
-  traffic-rollback: '{"zh-CN": "流量回滚","en-US": "traffic-rollback"}'
-  promote: '{"zh-CN": "服务转正","en-US": "promote"}'
-  app_transfer: '{"zh-CN": "应用商店所属权转移","en-US": "app_transfer"}'
-  helm_deploy: '{"zh-CN": "应用商店helm部署","en-US": "helm_deploy"}'
-  app_auth: '{"zh-CN": "应用商店权限更改","en-US": "app_auth"}'
-  app_delete: '{"zh-CN": "应用商店删除","en-US": "app_delete"}'
-  api_delete: '{"zh-CN": "签名删除","en-US": "api_delete"}'
-  api_create: '{"zh-CN": "签名生成","en-US": "api_create"}'
-  api_update: '{"zh-CN": "签名更新","en-US": "api_update"}'
-moduleOperate:
-  account-server: ['modify_group_owner']
-  model-deploy: ['update', 'delete', 'create-node-deploy', 'delete-node-deploy', 'createNativeResource', 'deleteNativeResource', 'create-graph', 'delete-graph', 'create-share-service', 'delete-share-service', 'traffic', 'traffic-rollback', 'promote']
-  appstore: ['app_transfer', 'app_auth', 'app_delete']
-  api-security: ['create', 'update', 'delete']
-appstoreMap:
-  v1/helm/helm_deploy: 'helm_deploy'
-  v1/store/app_auth: 'app_auth'
-  v1/store/app_transfer: 'app_transfer'
-  v1/store/app_delete: 'app_delete'
-  v1/token/create: 'api_create'
-  v1/token/update: 'api_update'
-  v1/token/delete: 'api_delete'
-outerService:
-  cluster-manager: 30418
-  node-manager: 30419
-  log-manager: 30420
-  mail: 30421
-  approve-outer: 30422
-  account-server-outer: 33333
-  authentication-manager: 33334
+approveMap:
+  moduleTransMap:
+    account-server: '{"zh-CN": "用户管理","en-US": "account-server"}'
+    model-deploy: '{"zh-CN": "模型服务","en-US": "model-deploy"}'
+    appstore: '{"zh-CN": "应用商店管理","en-US": "appstore"}'
+    api-security: '{"zh-CN": "API授权","en-US": "api-security"}'
+  operatorTransMap:
+    modify_group_owner: '{"zh-CN": "资源修改","en-US": "modify_group_owner"}'
+    update: '{"zh-CN": "应用部署","en-US": "update"}'
+    delete: '{"zh-CN": "应用删除","en-US": "delete"}'
+    create-node-deploy: '{"zh-CN": "节点部署","en-US": "create-node-deploy"}'
+    delete-node-deploy: '{"zh-CN": "节点部署删除","en-US": "delete-node-deploy"}'
+    createNativeResource: '{"zh-CN": "原生部署","en-US": "createNativeResource"}'
+    deleteNativeResource: '{"zh-CN": "原生部署删除","en-US": "deleteNativeResource"}'
+    create-graph: '{"zh-CN": "服务编排创建","en-US": "create-graph"}'
+    delete-graph: '{"zh-CN": "服务编排删除","en-US": "delete-graph"}'
+    create-share-service: '{"zh-CN": "细粒度服务创建","en-US": "create-share-service"}'
+    delete-share-service: '{"zh-CN": "细粒度服务删除","en-US": "delete-share-service"}'
+    traffic: '{"zh-CN": "创建/修改流量调控","en-US": "traffic"}'
+    traffic-rollback: '{"zh-CN": "流量回滚","en-US": "traffic-rollback"}'
+    promote: '{"zh-CN": "服务转正","en-US": "promote"}'
+    app_transfer: '{"zh-CN": "应用商店所属权转移","en-US": "app_transfer"}'
+    helm_deploy: '{"zh-CN": "应用商店helm部署","en-US": "helm_deploy"}'
+    app_auth: '{"zh-CN": "应用商店权限更改","en-US": "app_auth"}'
+    app_delete: '{"zh-CN": "应用商店删除","en-US": "app_delete"}'
+    api_delete: '{"zh-CN": "签名删除","en-US": "api_delete"}'
+    api_create: '{"zh-CN": "签名生成","en-US": "api_create"}'
+    api_update: '{"zh-CN": "签名更新","en-US": "api_update"}'
+  appstoreTransMap:
+    v1/helm/helm_deploy: 'helm_deploy'
+    v1/store/app_auth: 'app_auth'
+    v1/store/app_transfer: 'app_transfer'
+    v1/store/app_delete: 'app_delete'
+    v1/token/create: 'api_create'
+    v1/token/update: 'api_update'
+    v1/token/delete: 'api_delete'
+  moduleOperateMapAdmin:
+    account-server:
+    - "modify_group_owner"
+  moduleOperateMapGroup:
+    model-deploy:
+    - "update"
+    - "delete"
+    - "create-node-deploy"
+    - "delete-node-deploy"
+    - "createNativeResource"
+    - "deleteNativeResource"
+    - "create-graph"
+    - "delete-graph"
+    - "create-share-service"
+    - "delete-share-service"
+    - "traffic"
+    - "traffic-rollback"
+    - "promote"
+    appstore:
+    - "app_transfer"
+    - "app_auth"
+    - "app_delete"
+    api-security:
+    - "create"
+    - "update"
+    - "delete"
+  outerServicePortMap:
+    cluster-manager: 30418
+    node-manager: 30419
+    log-manager: 30420
+    mail: 30421
+    approve-outer: 30422
+    account-server-outer: 33333
+    authentication-manager: 33334

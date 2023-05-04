@@ -1,5 +1,13 @@
 package constants
 
+// Context Parameters
+const Destination = "Destination"
+const ClusterName = "ClusterName"
+const ClusterDomain = "ClusterDomain"
+const NeedApprove = "NeedApprove"
+
+// const Role = "Role"
+
 // Destination
 const DestinationIn = "in"
 const DestinationOut = "out"
