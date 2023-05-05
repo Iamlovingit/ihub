@@ -30,7 +30,7 @@ func InitMidwares(r *gin.Engine) error {
 		if f, ok := midwareMap[mw.Midware]; ok {
 			r.Use(f)
 		} else {
-			return fmt.Errorf("midware %s is not exist", mw.Midware)
+			return fmt.Errorf("%s:%s", mw.Midware, "not exist.")
 		}
 	}
 	return nil
