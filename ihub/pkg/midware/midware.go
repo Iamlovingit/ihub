@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
@@ -15,12 +17,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
 func InitMidwares(r *gin.Engine) error {
 	midwareMap := map[string]gin.HandlerFunc{
-		"log":     LoggerToFile(),
+		"log":     GinLogger(),
 		"trace":   Trace(),
 		"inout":   InOut(),
 		"auth":    Auth(),
@@ -36,70 +39,76 @@ func InitMidwares(r *gin.Engine) error {
 	return nil
 }
 
-type LogFormatter struct {
-	TimestampFormat string
-	LevelDesc       []string
+// BodyWriter ..
+type BodyWriter struct {
+	gin.ResponseWriter
+	bodyBuf *bytes.Buffer
 }
 
-func (f *LogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
-	timestampFormat := f.TimestampFormat
-	if timestampFormat == "" {
-		timestampFormat = time.RFC3339
-	}
-
-	var b *bytes.Buffer
-	if entry.Buffer != nil {
-		b = entry.Buffer
-	} else {
-		b = &bytes.Buffer{}
-	}
-
-	levelText := "INFO"
-	if entry.Level != logrus.InfoLevel {
-		levelText = f.LevelDesc[entry.Level]
-	}
-
-	b.WriteString(entry.Time.Format(timestampFormat))
-	b.WriteByte(' ')
-	b.WriteString(levelText)
-	b.WriteByte(' ')
-	b.WriteString(entry.Message)
-	b.WriteByte('\n')
-
-	return b.Bytes(), nil
+func (w *BodyWriter) Write(b []byte) (int, error) {
+	w.bodyBuf.Write(b)
+	return w.ResponseWriter.Write(b)
 }
 
-// 日志中间件 将信息输出到标准输出和日志中
-func LoggerToFile() gin.HandlerFunc {
+/*
+GinLogger is created for ginlog. It put the msg to stdout and logs.
+*/
+func GinLogger() gin.HandlerFunc {
 	logger := logrus.New()
-	logger.SetFormatter(&LogFormatter{
+	f, _ := os.OpenFile(constants.DefaultLogName, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0755)
+	logger.SetOutput(io.MultiWriter(os.Stdout, f))
+	logger.SetNoLock()
+
+	logger.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat: "2006-01-02 15:04:05",
-		LevelDesc:       []string{"DEBUG", "INFO", "WARNING", "ERROR", "FATAL"},
 	})
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel)
 
 	return func(c *gin.Context) {
-		start := time.Now()
-		path := c.Request.URL.Path
-		raw := c.Request.URL.RawQuery
-		c.Next()
-		end := time.Now()
-		latency := end.Sub(start)
-		clientIP := c.ClientIP()
-		method := c.Request.Method
-		statusCode := c.Writer.Status()
-		if raw != "" {
-			path = path + "?" + raw
+		level, err := logrus.ParseLevel(config.GetConfig().LOG.Level)
+		if err != nil {
+			level = logrus.TraceLevel
 		}
+		logger.SetLevel(level)
+		startTime := time.Now()
+		reqMethod := c.Request.Method
+		reqBody, _ := ioutil.ReadAll(c.Request.Body)
+		reqURI := c.Request.RequestURI
+		c.Request.Body = ioutil.NopCloser(bytes.NewBuffer(reqBody))
+		clientIP := c.ClientIP()
+		traceID := c.Request.Header.Get(constants.HTTPHeaderTraceID)
+
+		bw := &BodyWriter{
+			bodyBuf:        bytes.NewBufferString(""),
+			ResponseWriter: c.Writer,
+		}
+		c.Writer = bw
+		c.Next()
+		endTime := time.Now()
+		latencyTime := endTime.Sub(startTime)
+		statusCode := c.Writer.Status()
+
 		logger.WithFields(logrus.Fields{
-			"status":     statusCode,
-			"method":     method,
-			"ip":         clientIP,
-			"path":       path,
-			"latency":    latency,
-			"user-agent": c.Request.UserAgent(),
+			"status_code":  statusCode,
+			"trace_id":     traceID,
+			"latency_time": latencyTime,
+			"client_ip":    clientIP,
+			"req_method":   reqMethod,
+			"req_uri":      reqURI,
 		}).Info()
+
+		logger.WithFields(logrus.Fields{
+			"Type":      "Request",
+			"ReqUri":    reqURI,
+			"ReqHeader": c.Request.Header,
+			"ReqBody":   string(reqBody),
+		}).Trace()
+
+		logger.WithFields(logrus.Fields{
+			"Type":      "Response",
+			"Status":    statusCode,
+			"resHeader": c.Writer.Header(),
+			"ResBody":   bw.bodyBuf.String(),
+		}).Trace()
 	}
 }
 
@@ -365,6 +374,10 @@ func InOut() gin.HandlerFunc {
 
 func Trace() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
+		_, ok := c.Request.Header[constants.HTTPHeaderTraceID]
+		if !ok { //* X-Trace-ID is not exist, generate it.
+			id := uuid.NewString()
+			c.Request.Header.Set(constants.HTTPHeaderTraceID, id)
+		}
 	}
 }

@@ -25,3 +25,14 @@ const RunmodeIn = "in"
 const ClusterStatusReseting = 2
 const ClusterStatusResetSucceed = 1
 const ClusterStatusResetFailed = 0
+
+// HTTP Header variables
+const (
+	HTTPHeaderClusterName = "X-Cluster-Name"
+	HTTPHeaderTraceID     = "X-Trace-ID"
+)
+
+// Default value for rgm
+const (
+	DefaultLogName = "ihub.log"
+)
