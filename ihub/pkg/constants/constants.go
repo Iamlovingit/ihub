@@ -30,3 +30,14 @@ const ClusterStatusResetFailed = 0
 
 // ApproveStatus
 const ApproveStatusApproving = "APPROVING"
+
+// HTTP Header variables
+const (
+	HTTPHeaderClusterName = "X-Cluster-Name"
+	HTTPHeaderTraceID     = "X-Trace-ID"
+)
+
+// Default value for rgm
+const (
+	DefaultLogName = "ihub.log"
+)
