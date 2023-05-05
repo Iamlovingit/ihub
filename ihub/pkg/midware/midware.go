@@ -2,6 +2,7 @@ package midware
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,7 +16,6 @@ import (
 	"ihub/pkg/config"
 	"ihub/pkg/constants"
 	"ihub/pkg/db"
-	"ihub/pkg/utils"
 	"net/http"
 	"net/url"
 
@@ -147,9 +147,8 @@ func Auth() gin.HandlerFunc {
 		xAuthInfo := fmt.Sprintf("account:%s,groupId:%s,groupName:%s,roleType:%d,userId:%s,userType:%d",
 			account, groupId, groupName, roleType, userId, userType)
 
-		// pem文件？？
-		dbcfg := config.GetConfig().DB
-		pwdByte, _ := utils.DecryptSM2([]byte(xAuthInfo), dbcfg.SM2PrivateFile)
+		// p使用Base64对xAuthInfo进行编码
+		pwdByte := base64.StdEncoding.EncodeToString([]byte(xAuthInfo))
 		c.Request.Header.Set(constants.HTTPHeaderAuthInfo, string(pwdByte))
 		c.Next()
 	}
