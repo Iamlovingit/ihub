@@ -2,9 +2,11 @@ package constants
 
 // Context Parameters
 const Destination = "Destination"
+const ClusterId = "ClusterId"
 const ClusterName = "ClusterName"
 const ClusterDomain = "ClusterDomain"
 const NeedApprove = "NeedApprove"
+const ApproveRole = "ApproveRole"
 
 // const Role = "Role"
 
@@ -26,10 +28,14 @@ const ClusterStatusReseting = 2
 const ClusterStatusResetSucceed = 1
 const ClusterStatusResetFailed = 0
 
+// ApproveStatus
+const ApproveStatusApproving = "APPROVING"
+
 // HTTP Header variables
 const (
 	HTTPHeaderClusterName = "X-Cluster-Name"
 	HTTPHeaderTraceID     = "X-Trace-ID"
+	HTTPHeaderAuthInfo    = "X-Auth-Info"
 )
 
 // Default value for rgm

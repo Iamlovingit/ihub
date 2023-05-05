@@ -2,6 +2,8 @@ package midware
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +17,7 @@ import (
 	"ihub/pkg/constants"
 	"ihub/pkg/db"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -115,7 +118,39 @@ func GinLogger() gin.HandlerFunc {
 // Auth
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ibaseUrl := "http://" + config.GetConfig().IbaseUrl["ipPort"] + config.GetConfig().IbaseUrl["path"]
+		remote, _ := url.Parse(ibaseUrl)
+		req := http.Request{
+			Method: http.MethodGet,
+			Host:   remote.Host,
+			URL:    remote,
+			Header: c.Request.Header,
+		}
+		resp, err := http.DefaultClient.Do(&req)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			c.AbortWithError(http.StatusInternalServerError, errors.New("auth failed"))
+			return
+		}
+		respData := map[string]interface{}{}
+		json.NewDecoder(resp.Body).Decode(&respData)
+		account := respData["account"].(string)
+		groupId := respData["groupId"].(string)
+		groupName := respData["groupName"].(string)
+		roleType := respData["roleType"].(int)
+		userId := respData["userId"].(string)
+		userType := respData["userType"].(int)
+		xAuthInfo := fmt.Sprintf("account:%s,groupId:%s,groupName:%s,roleType:%d,userId:%s,userType:%d",
+			account, groupId, groupName, roleType, userId, userType)
 
+		// p使用Base64对xAuthInfo进行编码
+		pwdByte := base64.StdEncoding.EncodeToString([]byte(xAuthInfo))
+		c.Request.Header.Set(constants.HTTPHeaderAuthInfo, string(pwdByte))
+		c.Next()
 	}
 }
 
@@ -172,8 +207,7 @@ func Approve() gin.HandlerFunc {
 		// 解析URL，获取module和endpoint path = module/endpoint
 		module := c.Param("moudle")
 
-		// endpoint := utils.FormatEndpoint(c.Param("proxyPath"))
-		endpoint := c.Param("proxyPath")
+		endpoint := c.Param("endpoint")
 		// 如果是应用商店接口，需要进行接口转换，如去掉v1/helm、v1/store等
 		if _, ok := config.GetConfig().ApproveMap.AppstoreTransMap[endpoint]; ok {
 			endpoint = config.GetConfig().ApproveMap.AppstoreTransMap[endpoint]
@@ -183,6 +217,7 @@ func Approve() gin.HandlerFunc {
 		inList, role := inCheckList(module, endpoint)
 		// 如果不在列表，则直接通过
 		if !inList {
+			c.Set(constants.NeedApprove, false)
 			c.Next()
 		}
 
@@ -213,6 +248,7 @@ func Approve() gin.HandlerFunc {
 					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
 				c.Set(constants.NeedApprove, needApprove)
+				c.Set(constants.ApproveRole, constants.RoleClusterAdmin)
 				c.Next()
 			} else if role == constants.RoleGroupAdmin { // 如果为组管理员
 				// 获取组Id
@@ -234,6 +270,7 @@ func Approve() gin.HandlerFunc {
 					}
 					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
+				c.Set(constants.ApproveRole, constants.RoleGroupAdmin)
 				c.Set(constants.NeedApprove, needApprove)
 				c.Next()
 			}
@@ -326,6 +363,7 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 设置集群名称、域名、目的地
+			c.Set(constants.ClusterId, nameDomainIdList[0].ID)
 			c.Set(constants.ClusterName, clusterName)
 			c.Set(constants.ClusterDomain, nameDomainIdList[0].Domain)
 			c.Set(constants.Destination, constants.DestinationIn)
@@ -342,7 +380,7 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 根据集群Id获取集群域名
-			nameDomainList, err := db.GetNameDomainByClusterId(clusterId)
+			nameDomainIdList, err := db.GetNameDomainByClusterId(clusterId)
 			if err != nil {
 				rp := api.Reply{
 					Code:    999,
@@ -352,13 +390,14 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			//checkDomain
-			rp, err := checkDomain(nameDomainList)
+			rp, err := checkDomain(nameDomainIdList)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 设置集群名称、域名、目的地
-			c.Set(constants.ClusterName, nameDomainList[0].Name)
-			c.Set(constants.ClusterDomain, nameDomainList[0].Domain)
+			c.Set(constants.ClusterName, nameDomainIdList[0].Name)
+			c.Set(constants.ClusterId, nameDomainIdList[0].ID)
+			c.Set(constants.ClusterDomain, nameDomainIdList[0].Domain)
 			c.Set(constants.Destination, constants.DestinationIn)
 			c.Next()
 		} else {

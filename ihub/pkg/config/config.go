@@ -42,13 +42,14 @@ type MidwareConfig struct {
 
 // Configuration ...
 type Configuration struct {
-	DB         DBConfig        `yaml:"DB"`
-	LOG        LogConfig       `yaml:"log"`
-	SERVER     ServerConfig    `yaml:"server"`
-	CACHE      CacheConfig     `yaml:"cache"`
-	Midwares   []MidwareConfig `yaml:"midwares"`
-	Runmode    string          `yaml:"runmode"`
-	ApproveMap ApproveConfig   `yaml:"approveMap"`
+	DB         DBConfig          `yaml:"DB"`
+	LOG        LogConfig         `yaml:"log"`
+	SERVER     ServerConfig      `yaml:"server"`
+	CACHE      CacheConfig       `yaml:"cache"`
+	Midwares   []MidwareConfig   `yaml:"midwares"`
+	Runmode    string            `yaml:"runmode"`
+	IbaseUrl   map[string]string `yaml:"ibaseUrl"`
+	ApproveMap ApproveConfig     `yaml:"approveMap"`
 }
 
 type ApproveConfig struct {
@@ -57,7 +58,7 @@ type ApproveConfig struct {
 	ModuleOperateMapAdmin map[string][]string `yaml:"moduleOperateMapAdmin"`
 	ModuleOperateMapGroup map[string][]string `yaml:"moduleOperateMapGroup"`
 	AppstoreTransMap      map[string]string   `yaml:"appstoreTransMap"`
-	OuterServicePortMap   map[string]string   `yaml:"outerServicePortMap"`
+	OuterServicePortMap   map[string]int      `yaml:"outerServicePortMap"`
 }
 
 var gConfig Configuration
