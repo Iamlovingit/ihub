@@ -99,44 +99,51 @@ func Init() error {
 }
 
 // DomainId .
-type DomainId struct {
+type NameDomainId struct {
+	Name   string `db:"name"`
 	Domain string `db:"domain"`
 	ID     int    `db:"id"`
 }
 
 // GetDomainIdByClusterName .
-func GetDomainIdByClusterName(clusterName string) (string, int, error) {
-	var domainId []DomainId
+func GetDomainIdByClusterName(clusterName string) ([]NameDomainId, error) {
+	var domainId []NameDomainId
 	err := DBInstance.Collection("cluster_manager").
 		Find(db.Cond{"name": clusterName}).
 		All(&domainId)
 	if err != nil {
-		return "", 0, err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(domainId) == 0 {
-		return "", 0, fmt.Errorf("clusterName %s not found", clusterName)
-	} else if len(domainId) > 1 {
-		return "", 0, fmt.Errorf("clusterName %s not unique", clusterName)
+	return domainId, nil
+}
+
+// GetDomainByClusterId .
+func GetNameDomainByClusterId(clusterId int) ([]NameDomainId, error) {
+	var nameDomain []NameDomainId
+	err := DBInstance.Collection("cluster_manager").
+		Find(db.Cond{"id": clusterId}).
+		All(&nameDomain)
+	if err != nil {
+		return nil, err
 	}
-	return domainId[0].Domain, domainId[0].ID, nil
+	return nameDomain, nil
 }
 
 // ClusterStatus .
 type ClusterStatus struct {
-	Status string `db:"status"`
+	Status byte `db:"status"`
 }
 
 // GetClusterStatus .
-func GetClusterStatus(clusterName string) (string, error) {
+func GetClusterStatus(clusterName string) (int, error) {
 	var clusterStatus ClusterStatus
-	err := DBInstance.Collection("cluster_manager").
-		Find(db.Cond{"name": clusterName}).
+	err := DBInstance.Collection("reset_cluster_tracce").
+		Find(db.Cond{"cluster_name": clusterName}).
 		One(&clusterStatus)
 	if err != nil {
-		return "", err
+		return 0, err
 	}
-	return clusterStatus.Status, nil
+	return int(clusterStatus.Status), nil
 }
 
 // ModuleauthorityModuleid .
@@ -147,7 +154,7 @@ type ModuleauthorityModuleid struct {
 
 // GetModuleauthorityModuleid .
 // 根据clusterId、module、role查询module_id
-func GetModuleauthorityModuleid(clusterId int, moduleName string, role string) (string, int, error) {
+func GetModuleauthorityModuleid(clusterId int, moduleName string, role int) ([]ModuleauthorityModuleid, error) {
 	// 根据 module_id 连接 approve_rule、 approve_module 两张表查询
 	var moduleauthorityModuleid []ModuleauthorityModuleid
 	req := DBInstance.SQL().
@@ -158,20 +165,14 @@ func GetModuleauthorityModuleid(clusterId int, moduleName string, role string) (
 		Where(db.Cond{"a.cluster_id": clusterId, "b.module_name": moduleName, "a.user_role": role})
 	err := req.All(&moduleauthorityModuleid)
 	if err != nil {
-		return "", 0, err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(moduleauthorityModuleid) == 0 {
-		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, role %s not found", clusterId, moduleName, role)
-	} else if len(moduleauthorityModuleid) > 1 {
-		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, role %s not unique", clusterId, moduleName, role)
-	}
-	return moduleauthorityModuleid[0].Authority, moduleauthorityModuleid[0].ModuleId, nil
+	return moduleauthorityModuleid, nil
 }
 
 // GetModuleauthorityModuleidInGroup .
 // 根据clusterId、module、组ID查询module_id
-func GetModuleauthorityModuleidInGroup(clusterId int, moduleName string, groupId int) (string, int, error) {
+func GetModuleauthorityModuleidInGroup(clusterId int, moduleName string, groupId int) ([]ModuleauthorityModuleid, error) {
 	// 根据 module_id 连接 approve_rule、 approve_module 两张表查询
 	var moduleauthorityModuleid []ModuleauthorityModuleid
 	req := DBInstance.SQL().
@@ -182,28 +183,22 @@ func GetModuleauthorityModuleidInGroup(clusterId int, moduleName string, groupId
 		Where(db.Cond{"a.cluster_id": clusterId, "b.module_name": moduleName, "a.group_id": groupId})
 	err := req.All(&moduleauthorityModuleid)
 	if err != nil {
-		return "", 0, err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(moduleauthorityModuleid) == 0 {
-		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, group %d not found", clusterId, moduleName, groupId)
-	} else if len(moduleauthorityModuleid) > 1 {
-		return "", 0, fmt.Errorf("clusterId %d, moduleName %s, group %d not unique", clusterId, moduleName, groupId)
-	}
-	return moduleauthorityModuleid[0].Authority, moduleauthorityModuleid[0].ModuleId, nil
+	return moduleauthorityModuleid, nil
 }
 
 // Defaultauthority .
 type Defaultauthority struct {
-	Authority string `db:"authority"`
+	Authority byte `db:"authority"`
 }
 
 // GetDefaultauthority .
 // 根据clusterId、module、operate_name查询默认权限
-func GetDefaultauthority(clusterId int, moduleName string, operateName string) (string, error) {
+func GetDefaultauthority(clusterId int, moduleName string, operateName string) ([]Defaultauthority, error) {
 	// 根据c.source_division b.module_cluster_type 连接 cluster_manager 和 approve_module 两张表查询
 	// 根据 module_id 连接 approve_operate、 approve_module 两张表查询
-	var defaultauthority []string
+	var defaultauthority []Defaultauthority
 	req := DBInstance.SQL().
 		Select("a.authority").
 		From("approve_operate a").
@@ -214,15 +209,9 @@ func GetDefaultauthority(clusterId int, moduleName string, operateName string) (
 		Where(db.Cond{"c.id": clusterId, "b.module_name": moduleName, "a.operate_name": operateName})
 	err := req.All(&defaultauthority)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(defaultauthority) == 0 {
-		return "", fmt.Errorf("clusterId %d, moduleName %s, operateName %s not found", clusterId, moduleName, operateName)
-	} else if len(defaultauthority) > 1 {
-		return "", fmt.Errorf("clusterId %d, moduleName %s, operateName %s not unique", clusterId, moduleName, operateName)
-	}
-	return defaultauthority[0], nil
+	return defaultauthority, nil
 }
 
 // Operatorid .
@@ -232,7 +221,7 @@ type Operatorid struct {
 
 // GetOperatorid .
 // 根据module_id、operate_name查询操操作id
-func GetOperatorid(moduleId int, operateName string) (int, error) {
+func GetOperatorid(moduleId int, operateName string) ([]Operatorid, error) {
 	// 根据 approve_operate 表查询
 	var operatorid []Operatorid
 	req := DBInstance.SQL().
@@ -241,15 +230,9 @@ func GetOperatorid(moduleId int, operateName string) (int, error) {
 		Where(db.Cond{"module_id": moduleId, "operate_name": operateName})
 	err := req.All(&operatorid)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	// 根据返回item数量 判断是否存在且唯一
-	if len(operatorid) == 0 {
-		return 0, fmt.Errorf("moduleId %d, operateName %s not found", moduleId, operateName)
-	} else if len(operatorid) > 1 {
-		return 0, fmt.Errorf("moduleId %d, operateName %s not unique", moduleId, operateName)
-	}
-	return operatorid[0].OperatorId, nil
+	return operatorid, nil
 }
 
 // 向 approve_inf 插入一条记录
