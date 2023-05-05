@@ -2,6 +2,7 @@ package midware
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +15,9 @@ import (
 	"ihub/pkg/config"
 	"ihub/pkg/constants"
 	"ihub/pkg/db"
+	"ihub/pkg/utils"
 	"net/http"
+	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -115,7 +118,40 @@ func GinLogger() gin.HandlerFunc {
 // Auth
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		ibaseUrl := "http://" + config.GetConfig().IbaseUrl["ipPort"] + config.GetConfig().IbaseUrl["path"]
+		remote, _ := url.Parse(ibaseUrl)
+		req := http.Request{
+			Method: http.MethodGet,
+			Host:   remote.Host,
+			URL:    remote,
+			Header: c.Request.Header,
+		}
+		resp, err := http.DefaultClient.Do(&req)
+		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			c.AbortWithError(http.StatusInternalServerError, errors.New("auth failed"))
+			return
+		}
+		respData := map[string]interface{}{}
+		json.NewDecoder(resp.Body).Decode(&respData)
+		account := respData["account"].(string)
+		groupId := respData["groupId"].(string)
+		groupName := respData["groupName"].(string)
+		roleType := respData["roleType"].(int)
+		userId := respData["userId"].(string)
+		userType := respData["userType"].(int)
+		xAuthInfo := fmt.Sprintf("account:%s,groupId:%s,groupName:%s,roleType:%d,userId:%s,userType:%d",
+			account, groupId, groupName, roleType, userId, userType)
 
+		// pem文件？？
+		dbcfg := config.GetConfig().DB
+		pwdByte, _ := utils.DecryptSM2([]byte(xAuthInfo), dbcfg.SM2PrivateFile)
+		c.Request.Header.Set(constants.HTTPHeaderAuthInfo, string(pwdByte))
+		c.Next()
 	}
 }
 

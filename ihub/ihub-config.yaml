@@ -22,6 +22,9 @@ midwares:
 - midware: "trace"
 - midware: "inout"
 - midware: "auth"
+ibaseUrl: 
+  ipPort: "100.2.44.60:32000"
+  path: "/v1/token"
 approveMap:
   moduleTransMap:
     account-server: '{"zh-CN": "用户管理","en-US": "account-server"}'

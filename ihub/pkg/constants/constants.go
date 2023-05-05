@@ -35,6 +35,7 @@ const ApproveStatusApproving = "APPROVING"
 const (
 	HTTPHeaderClusterName = "X-Cluster-Name"
 	HTTPHeaderTraceID     = "X-Trace-ID"
+	HTTPHeaderAuthInfo    = "X-Auth-Info"
 )
 
 // Default value for rgm
