@@ -57,7 +57,7 @@ type ApproveConfig struct {
 	ModuleOperateMapAdmin map[string][]string `yaml:"moduleOperateMapAdmin"`
 	ModuleOperateMapGroup map[string][]string `yaml:"moduleOperateMapGroup"`
 	AppstoreTransMap      map[string]string   `yaml:"appstoreTransMap"`
-	OuterServicePortMap   map[string]string   `yaml:"outerServicePortMap"`
+	OuterServicePortMap   map[string]int      `yaml:"outerServicePortMap"`
 }
 
 var gConfig Configuration

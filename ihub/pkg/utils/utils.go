@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"fmt"
+	"ihub/pkg/config"
+	"ihub/pkg/constants"
 	"os"
 	"strings"
 
@@ -38,18 +41,40 @@ func DecryptSM2(cipherText []byte, priFileName string) ([]byte, error) {
 }
 
 // 拼接URL
-func MakeURL(domain, proxyPath string) (string, string) {
-	// proxyPath = /完整路径(fullPath) = /模块名称(moudle)/真实路径(realPath)
-	// 目标URL
-	targetURL := "http://"
-	// 去掉proxyPath中的第一个/，得到完整的路径
-	fullPath := proxyPath[1:]
-	// 截取fullPath中直到第一个/的字符串，该字符串即为模块名称
-	moudle := fullPath[:strings.Index(fullPath, "/")]
-	// 拼接目标URL，格式为http://模块名称.default.域名
-	targetURL = targetURL + moudle + ".default." + domain
-	// 截取fullPath中第一个/之后的字符串，该字符串为真实路径
-	realPath := fullPath[strings.Index(fullPath, "/"):]
-	// 返回目标URL和真实路径
-	return targetURL, realPath
+func MakeURL(destination string, domain string, module string, endpoint string, runmode string) (string, string) {
+	// 判断URL为集群内还是集群外
+	if destination == constants.DestinationOut {
+		// 	拼接集群外URL
+		// http://localhost:port/endpoints
+		targetURL := "http://localhost:"
+		port := config.GetConfig().ApproveMap.OuterServicePortMap[module]
+		targetURL = targetURL + fmt.Sprint(port) + "/" + endpoint
+		realPath := "/" + endpoint
+		return targetURL, realPath
+
+	} else if destination == constants.DestinationIn {
+		if runmode == constants.RunmodeIn {
+			// 如果是集群内ihub服务
+			// http://模块名称.default.域名/endpoints
+			targetURL := "http://"
+			realPath := "/" + endpoint
+			targetURL = targetURL + module + ".default." + domain + realPath
+			return targetURL, realPath
+		} else {
+			// 如果是集群外ihub服务，则发往集群内ihub服务
+			// http://ihub.default.域名/module/endpoints
+			targetURL := "http://" + "ihub" + ".default." + domain // 待修改
+			realPath := "/" + module + "/" + endpoint
+			targetURL = targetURL + realPath
+			return targetURL, realPath
+		}
+	} else {
+		return "", ""
+	}
+}
+
+func MakeValiURL(url string, module string, endpoint string) string {
+	vali_name := "vali_" + module + "_" + endpoint
+	vali_url := url[:strings.LastIndex(url, "/")] + "/" + vali_name
+	return vali_url
 }

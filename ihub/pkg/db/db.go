@@ -235,11 +235,36 @@ func GetOperatorid(moduleId int, operateName string) ([]Operatorid, error) {
 	return operatorid, nil
 }
 
+// ApproveInf .
+type ApproveInf struct {
+	ID              int       `db:"id, omitempty"`
+	ResourceInfo    string    `db:"resource_info"`
+	Createtime      time.Time `db:"createtime"`
+	Userid          int       `db:"userid"`
+	Type            string    `db:"type"`
+	Status          string    `db:"status"`
+	Cluasterid      int       `db:"clusterid"`
+	Advice          string    `db:"advice"`
+	Groupid         int       `db:"groupid"`
+	UserRole        int       `db:"user_role"`
+	ModuleName      string    `db:"module_name"`
+	URL             string    `db:"url"`
+	Method          string    `db:"method"`
+	OperateName     string    `db:"operate_name"`
+	ResourceDetail  string    `db:"resource_detail"`
+	Headers         string    `db:"headers"`
+	ApproveRole     int       `db:"approve_role"`
+	ApproveResult   string    `db:"approve_result"`
+	ApproveTime     time.Time `db:"approve_time"`
+	IsDelete        int       `db:"is_delete"`
+	IsApproveDelete int       `db:"is_approve_delete"`
+}
+
 // 向 approve_inf 插入一条记录
 // resource_info resource_detail headers createtime userid module_name operate_name status clusterid
 // user_role url method approve_role group_id type
 // 其中 createtime 为当前时间， 使用SQL函数NOW()获取
-func InsertApproveInf(resourceInfo string, resourceDetail string, headers string, userId int, moduleName string, operateName string, status string, clusterId int, userRole string, url string, method string, approveRole string, groupId int, approveType string) error {
+func InsertApproveInf(resourceInfo []byte, resourceDetail []byte, headers []byte, userId int, moduleName string, operateName string, status string, clusterId int, userRole int, url string, method string, approveRole int, groupId int, approveType string) error {
 	// 根据 approve_inf 表查询
 	req := DBInstance.SQL().
 		InsertInto("approve_inf").

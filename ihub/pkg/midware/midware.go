@@ -163,8 +163,7 @@ func Approve() gin.HandlerFunc {
 		// 解析URL，获取module和endpoint path = module/endpoint
 		module := c.Param("moudle")
 
-		// endpoint := utils.FormatEndpoint(c.Param("proxyPath"))
-		endpoint := c.Param("proxyPath")
+		endpoint := c.Param("endpoint")
 		// 如果是应用商店接口，需要进行接口转换，如去掉v1/helm、v1/store等
 		if _, ok := config.GetConfig().ApproveMap.AppstoreTransMap[endpoint]; ok {
 			endpoint = config.GetConfig().ApproveMap.AppstoreTransMap[endpoint]
@@ -174,6 +173,7 @@ func Approve() gin.HandlerFunc {
 		inList, role := inCheckList(module, endpoint)
 		// 如果不在列表，则直接通过
 		if !inList {
+			c.Set(constants.NeedApprove, false)
 			c.Next()
 		}
 
@@ -204,6 +204,7 @@ func Approve() gin.HandlerFunc {
 					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
 				c.Set(constants.NeedApprove, needApprove)
+				c.Set(constants.ApproveRole, constants.RoleClusterAdmin)
 				c.Next()
 			} else if role == constants.RoleGroupAdmin { // 如果为组管理员
 				// 获取组Id
@@ -225,6 +226,7 @@ func Approve() gin.HandlerFunc {
 					}
 					c.AbortWithStatusJSON(http.StatusOK, rp)
 				}
+				c.Set(constants.ApproveRole, constants.RoleGroupAdmin)
 				c.Set(constants.NeedApprove, needApprove)
 				c.Next()
 			}
@@ -317,6 +319,7 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 设置集群名称、域名、目的地
+			c.Set(constants.ClusterId, nameDomainIdList[0].ID)
 			c.Set(constants.ClusterName, clusterName)
 			c.Set(constants.ClusterDomain, nameDomainIdList[0].Domain)
 			c.Set(constants.Destination, constants.DestinationIn)
@@ -333,7 +336,7 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 根据集群Id获取集群域名
-			nameDomainList, err := db.GetNameDomainByClusterId(clusterId)
+			nameDomainIdList, err := db.GetNameDomainByClusterId(clusterId)
 			if err != nil {
 				rp := api.Reply{
 					Code:    999,
@@ -343,13 +346,14 @@ func InOut() gin.HandlerFunc {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			//checkDomain
-			rp, err := checkDomain(nameDomainList)
+			rp, err := checkDomain(nameDomainIdList)
 			if err != nil {
 				c.AbortWithStatusJSON(http.StatusOK, rp)
 			}
 			// 设置集群名称、域名、目的地
-			c.Set(constants.ClusterName, nameDomainList[0].Name)
-			c.Set(constants.ClusterDomain, nameDomainList[0].Domain)
+			c.Set(constants.ClusterName, nameDomainIdList[0].Name)
+			c.Set(constants.ClusterId, nameDomainIdList[0].ID)
+			c.Set(constants.ClusterDomain, nameDomainIdList[0].Domain)
 			c.Set(constants.Destination, constants.DestinationIn)
 			c.Next()
 		} else {

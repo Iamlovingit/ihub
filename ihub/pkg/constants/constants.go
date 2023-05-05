@@ -2,9 +2,11 @@ package constants
 
 // Context Parameters
 const Destination = "Destination"
+const ClusterId = "ClusterId"
 const ClusterName = "ClusterName"
 const ClusterDomain = "ClusterDomain"
 const NeedApprove = "NeedApprove"
+const ApproveRole = "ApproveRole"
 
 // const Role = "Role"
 
@@ -25,3 +27,6 @@ const RunmodeIn = "in"
 const ClusterStatusReseting = 2
 const ClusterStatusResetSucceed = 1
 const ClusterStatusResetFailed = 0
+
+// ApproveStatus
+const ApproveStatusApproving = "APPROVING"
